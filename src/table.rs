@@ -439,6 +439,18 @@ impl<'txn, K: RedbKey + 'static, V: RedbValue + 'static> ReadOnlyTable<'txn, K, 
             _lifetime: Default::default(),
         })
     }
+
+    /// This method is like `range()`, but the iterator is reference counted and keeps the transaction
+    /// alive until it is dropped.
+    pub fn range_arc<'a, KR>(&self, range: impl RangeBounds<KR> + 'a) -> Result<ArcRange<K, V>>
+    where
+        K: 'a,
+        KR: Borrow<K::SelfType<'a>> + 'a,
+    {
+        self.tree.range(&range).map(|x| ArcRange {
+            inner: Range::new(x, self.transaction_guard.clone()),
+        })
+    }
 }
 
 impl<'txn, K: RedbKey + 'static, V: RedbValue + 'static> ReadableTable<K, V>
@@ -591,6 +603,24 @@ impl<
             let value = AccessGuard::with_page(page, value_range);
             (key, value)
         }))
+    }
+}
+
+pub struct ArcRange<K: RedbKey + 'static, V: RedbValue + 'static> {
+    inner: Range<'static, K, V>,
+}
+
+impl<K: RedbKey + 'static, V: RedbValue + 'static> Iterator for ArcRange<K, V> {
+    type Item = Result<(AccessGuard<'static, K>, AccessGuard<'static, V>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<K: RedbKey + 'static, V: RedbValue + 'static> DoubleEndedIterator for ArcRange<K, V> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
     }
 }
 

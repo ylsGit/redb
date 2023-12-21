@@ -566,6 +566,24 @@ enum ValueIterState<'a, V: RedbKey + 'static> {
     InlineLeaf(LeafKeyIter<'a, V>),
 }
 
+pub struct ArcMultimapValue<V: RedbKey + 'static> {
+    inner: MultimapValue<'static, V>,
+}
+
+impl<V: RedbKey + 'static> Iterator for ArcMultimapValue<V> {
+    type Item = <MultimapValue<'static, V> as Iterator>::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<V: RedbKey + 'static> DoubleEndedIterator for ArcMultimapValue<V> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
+    }
+}
+
 pub struct MultimapValue<'a, V: RedbKey + 'static> {
     inner: Option<ValueIterState<'a, V>>,
     freed_pages: Option<Arc<Mutex<Vec<PageNumber>>>>,
@@ -662,6 +680,24 @@ impl<'a, V: RedbKey + 'static> Drop for MultimapValue<'a, V> {
                 }
             }
         }
+    }
+}
+
+pub struct ArcMultimapRange<K: RedbKey + 'static, V: RedbKey + 'static> {
+    inner: MultimapRange<'static, K, V>,
+}
+
+impl<K: RedbKey + 'static, V: RedbKey + 'static> Iterator for ArcMultimapRange<K, V> {
+    type Item = <MultimapRange<'static, K, V> as Iterator>::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<K: RedbKey + 'static, V: RedbKey + 'static> DoubleEndedIterator for ArcMultimapRange<K, V> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
     }
 }
 
@@ -1295,6 +1331,40 @@ impl<'txn, K: RedbKey + 'static, V: RedbKey + 'static> ReadOnlyMultimapTable<'tx
             _value_type: Default::default(),
             _lifetime: Default::default(),
         })
+    }
+
+    /// This method is like `get()`, but the iterator is reference counted and keeps the transaction
+    /// alive until it is dropped.
+    pub fn get_arc<'a>(&self, key: impl Borrow<K::SelfType<'a>>) -> Result<ArcMultimapValue<V>>
+    where
+        K: 'a,
+    {
+        let iter = if let Some(collection) = self.tree.get(key.borrow())? {
+            DynamicCollection::iter(collection, self.transaction_guard.clone(), self.mem.clone())?
+        } else {
+            MultimapValue::new_subtree(
+                BtreeRangeIter::new::<RangeFull, &V::SelfType<'_>>(&(..), None, self.mem.clone())?,
+                self.transaction_guard.clone(),
+            )
+        };
+
+        Ok(ArcMultimapValue { inner: iter })
+    }
+
+    /// This method is like `range()`, but the iterator is reference counted and keeps the transaction
+    /// alive until it is dropped.
+    pub fn range_arc<'a, KR>(
+        &self,
+        range: impl RangeBounds<KR> + 'a,
+    ) -> Result<ArcMultimapRange<K, V>>
+    where
+        K: 'a,
+        KR: Borrow<K::SelfType<'a>> + 'a,
+    {
+        let inner = self.tree.range(&range)?;
+        let range = MultimapRange::new(inner, self.transaction_guard.clone(), self.mem.clone());
+
+        Ok(ArcMultimapRange { inner: range })
     }
 }
 

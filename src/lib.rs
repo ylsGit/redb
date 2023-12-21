@@ -62,11 +62,11 @@ pub use error::{
     TransactionError,
 };
 pub use multimap_table::{
-    MultimapRange, MultimapTable, MultimapValue, ReadOnlyMultimapTable,
-    ReadOnlyUntypedMultimapTable, ReadableMultimapTable,
+    ArcMultimapRange, ArcMultimapValue, MultimapRange, MultimapTable, MultimapValue,
+    ReadOnlyMultimapTable, ReadOnlyUntypedMultimapTable, ReadableMultimapTable,
 };
 pub use table::{
-    Drain, DrainFilter, Range, ReadOnlyTable, ReadOnlyUntypedTable, ReadableTable, Table,
+    ArcRange, Drain, DrainFilter, Range, ReadOnlyTable, ReadOnlyUntypedTable, ReadableTable, Table,
     TableStats,
 };
 pub use transactions::{DatabaseStats, Durability, ReadTransaction, WriteTransaction};
