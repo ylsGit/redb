@@ -606,6 +606,7 @@ impl<
     }
 }
 
+#[derive(Clone)]
 pub struct ArcRange<K: RedbKey + 'static, V: RedbValue + 'static> {
     inner: Range<'static, K, V>,
 }
@@ -624,6 +625,7 @@ impl<K: RedbKey + 'static, V: RedbValue + 'static> DoubleEndedIterator for ArcRa
     }
 }
 
+#[derive(Clone)]
 pub struct Range<'a, K: RedbKey + 'static, V: RedbValue + 'static> {
     inner: BtreeRangeIter<K, V>,
     _transaction_guard: Arc<TransactionGuard>,
