@@ -625,15 +625,17 @@ impl Database {
             read_cache_size_bytes,
             write_cache_size_bytes,
         )?;
+        println!("***********111111111");
         if mem.needs_repair()? {
+            println!("***********111111111needs_repair");
             #[cfg(feature = "logging")]
             warn!("Database {:?} not shutdown cleanly. Repairing", &file_path);
             Self::do_repair(&mut mem)?;
         }
-
+        println!("***********222222222222222");
         mem.begin_writable()?;
         let next_transaction_id = mem.get_last_committed_transaction_id()?.next();
-
+        println!("***********333333333");
         let db = Database {
             mem,
             next_transaction_id: AtomicTransactionId::new(next_transaction_id),
@@ -641,7 +643,7 @@ impl Database {
             live_write_transaction: Mutex::new(None),
             live_write_transaction_available: Condvar::new(),
         };
-
+        println!("***********44444444444444");
         // Restore the tracker state for any persistent savepoints
         let txn = db.begin_write().map_err(|e| e.into_storage_error())?;
         if let Some(next_id) = txn.next_persistent_savepoint_id()? {
@@ -650,6 +652,7 @@ impl Database {
                 .unwrap()
                 .restore_savepoint_counter_state(next_id);
         }
+        println!("***********555555555555555");
         for id in txn.list_persistent_savepoints()? {
             let savepoint = match txn.get_persistent_savepoint(id) {
                 Ok(savepoint) => savepoint,
@@ -665,6 +668,7 @@ impl Database {
                 .unwrap()
                 .register_persistent_savepoint(&savepoint);
         }
+        println!("***********66666666666666");
         txn.abort()?;
 
         Ok(db)
@@ -804,11 +808,11 @@ impl Builder {
     /// Opens an existing redb database.
     pub fn open(&self, path: impl AsRef<Path>) -> Result<Database, DatabaseError> {
         let file = OpenOptions::new().read(true).write(true).open(path)?;
-
+        println!("============");
         if file.metadata()?.len() == 0 {
             return Err(StorageError::Io(ErrorKind::InvalidData.into()).into());
         }
-
+        println!("**************");
         Database::new(
             file,
             self.page_size,
