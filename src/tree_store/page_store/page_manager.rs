@@ -172,7 +172,7 @@ impl TransactionalMemory {
             };
 
             let mut header = DatabaseHeader::new(layout, TransactionId(0), tracker_page);
-
+            println!("new  recovery_required = false");
             header.recovery_required = false;
             storage
                 .write(0, DB_HEADER_SIZE, true, |_| CachePriority::High)?
@@ -408,6 +408,7 @@ impl TransactionalMemory {
             .allocators
             .flush_to(tracker_page, state.header.layout(), &self.storage)?;
 
+        println!("end_repair recovery_required=false   111111");
         state.header.recovery_required = false;
         self.write_header(&state.header, false)?;
         let result = self.storage.flush();
@@ -1106,6 +1107,7 @@ impl Drop for TransactionalMemory {
         }
 
         if self.storage.flush().is_ok() && !self.needs_recovery.load(Ordering::Acquire) {
+            println!("drop recovery_required=false   2222");
             state.header.recovery_required = false;
             let _ = self.write_header(&state.header, false);
             let _ = self.storage.flush();

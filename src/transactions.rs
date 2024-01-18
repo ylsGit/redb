@@ -795,6 +795,7 @@ impl<'db> WriteTransaction<'db> {
     /// All writes performed in this transaction will be visible to future transactions, and are
     /// durable as consistent with the [`Durability`] level set by [`Self::set_durability`]
     pub fn commit(mut self) -> Result<(), CommitError> {
+        println!("redb commit......");
         // Set completed flag first, so that we don't go through the abort() path on drop, if this fails
         self.completed = true;
         self.commit_inner()
